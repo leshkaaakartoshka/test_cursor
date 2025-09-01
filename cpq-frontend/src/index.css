@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base focus and color scheme */
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html:focus-within {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply min-h-screen bg-white text-gray-900 antialiased;
+  }
+  a {
+    @apply text-primary-600 hover:text-primary-700 underline-offset-2;
+  }
+}
