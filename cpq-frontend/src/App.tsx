@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IMaskInput } from 'react-imask';
 import { FormField, FormRow, ResultCard, StatusBar } from './components/FormPrimitives';
-import { fefcoOptions, materialOptions, printOptions, slaOptions, quoteSchema, type QuoteFormData } from './validation';
+import { fefcoOptions, materialOptions, printOptions, slaOptions, quoteSchema, type QuoteFormData, toPayload } from './validation';
 import { postQuote, type ApiResponse } from './api';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
@@ -24,10 +24,9 @@ function App() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors },
     setValue,
     trigger,
-    control,
   } = useForm<QuoteFormData>({
     mode: 'all',
     resolver: zodResolver(quoteSchema),
@@ -36,8 +35,7 @@ function App() {
     },
   });
 
-  // Keep isValid in sync in tests and runtime
-  const watched = (control as any)?._proxy ? undefined : undefined; // placeholder to avoid unused var warnings
+  // Keep validation state in sync
   useEffect(() => {
     void trigger();
   });
@@ -46,7 +44,7 @@ function App() {
   const [result, setResult] = useState<ApiResponse | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async (values: QuoteFormData) => {
     // eslint-disable-next-line no-console
     console.log('onSubmit values', values);
     pushEvent({ event: 'cpq_form_submit' });
@@ -54,7 +52,8 @@ function App() {
     setResult(null);
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-    const res = await postQuote(values, abortRef.current.signal).catch((err) => ({ ok: false as const, error: String(err) }));
+    const payload = toPayload(values);
+    const res = await postQuote(payload, abortRef.current.signal).catch((err) => ({ ok: false as const, error: String(err) }));
     if (res.ok) {
       pushEvent({ event: 'cpq_api_ok', lead_id: res.lead_id });
       setResult(res);
@@ -209,7 +208,6 @@ function App() {
         <div className="mt-6 flex gap-3">
           <button
             type="submit"
-            disabled={status === 'loading'}
             className="inline-flex items-center rounded-md bg-primary-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2"
           >
             Сформировать КП
